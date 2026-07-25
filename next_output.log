@@ -1,0 +1,23 @@
+
+> localvault@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.4
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+
+   We detected TypeScript in your project and reconfigured your tsconfig.json file for you. Strict-mode is set to false by default.
+   The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+	- include was updated to add 'dist/types/**/*.ts'
+
+ ✓ Ready in 3.9s
+ ○ Compiling / ...
+ ✓ Compiled / in 5.9s (560 modules)
+ GET / 200 in 6293ms
+ GET / 200 in 79ms
+ ○ Compiling /pricing ...
+ ✓ Compiled /pricing in 764ms (547 modules)
+ GET / 200 in 161ms
