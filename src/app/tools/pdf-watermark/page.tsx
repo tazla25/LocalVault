@@ -6,13 +6,11 @@ import { PdfPreview } from "@/components/tools/PdfPreview";
 import { WatermarkSettings } from "@/components/tools/WatermarkSettings";
 import { WatermarkOptions } from "@/types";
 import { addWatermarkToPdf } from "@/lib/pdf-utils";
+import { useDocumentProcessor } from "@/hooks/useDocumentProcessor";
 import { Download, Loader2 } from "lucide-react";
 
 export default function PdfWatermarkPage() {
-  const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | null>(null);
-  const [processedPdf, setProcessedPdf] = useState<Uint8Array | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [fileName, setFileName] = useState("document.pdf");
+  const { pdfBytes, result, status, loadFile, processDocument, download: downloadFile } = useDocumentProcessor();
 
   const [options, setOptions] = useState<WatermarkOptions>({
     text: "CONFIDENTIAL",
@@ -23,34 +21,20 @@ export default function PdfWatermarkPage() {
     repeat: false,
   });
 
-  const handleFileSelect = (file: File, buffer: ArrayBuffer) => {
-    setPdfBytes(buffer);
-    setFileName(file.name);
-    setProcessedPdf(null);
+  const handleFileSelect = (file: File, _buffer: ArrayBuffer) => {
+    loadFile(file).catch(console.error);
   };
 
   const handleApplyWatermark = async () => {
-    if (!pdfBytes) return;
-    setIsProcessing(true);
     try {
-      const result = await addWatermarkToPdf(pdfBytes, options);
-      setProcessedPdf(result);
+      await processDocument((bytes) => addWatermarkToPdf(bytes, options));
     } catch (err) {
       console.error(err);
-    } finally {
-      setIsProcessing(false);
     }
   };
 
   const handleDownload = () => {
-    if (!processedPdf) return;
-    const blob = new Blob([processedPdf as BlobPart], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `watermarked_${fileName}`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (result) downloadFile(result, "watermarked");
   };
 
   return (
@@ -68,19 +52,23 @@ export default function PdfWatermarkPage() {
 
           {pdfBytes && (
             <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-700/50 space-y-6">
-              <h3 className="font-semibold text-slate-200 text-sm">Watermark Settings</h3>
+              <h3 className="font-semibold text-slate-200 text-sm">
+                Watermark Settings
+              </h3>
               <WatermarkSettings options={options} onChange={setOptions} />
 
               <button
                 onClick={handleApplyWatermark}
-                disabled={isProcessing}
+                disabled={status === "processing"}
                 className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-all"
               >
-                {isProcessing && <Loader2 className="w-4 h-4 animate-spin" />}
+                {status === "processing" && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
                 Apply Watermark
               </button>
 
-              {processedPdf && (
+              {result && (
                 <button
                   onClick={handleDownload}
                   className="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 font-bold text-sm flex items-center justify-center gap-2 transition-all"
@@ -94,7 +82,7 @@ export default function PdfWatermarkPage() {
         </div>
 
         <div className="lg:col-span-2">
-          <PdfPreview pdfBytes={(processedPdf?.buffer as ArrayBuffer) || pdfBytes} />
+          <PdfPreview pdfBytes={(result ? (result.buffer as ArrayBuffer) : pdfBytes)} />
         </div>
       </div>
     </div>
