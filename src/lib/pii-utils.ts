@@ -2,7 +2,7 @@ import { PiiMatch, PiiScanResult } from "@/types";
 
 export const PII_PATTERNS = {
   ssn: {
-    pattern: /\b\d{3}[-.\s]?\d{2}[-.\s]?\d{4}\b/g,
+    pattern: /\b\d{3}[-.]\s?\d{2}[-.]\s?\d{4}\b/g,
     label: "SSN",
     severity: "critical",
   },
@@ -12,7 +12,7 @@ export const PII_PATTERNS = {
     severity: "high",
   },
   phone: {
-    pattern: /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/g,
+    pattern: /\b(?:\+1[-.]?)?\(?\d{3}\)?[-.]\s?\d{3}[-.]\s?\d{4}\b/g,
     label: "Phone",
     severity: "medium",
   },
@@ -26,17 +26,33 @@ export const PII_PATTERNS = {
     label: "Passport",
     severity: "critical",
   },
-  bankAccount: {
-    pattern: /\b\d{8,17}\b/g,
-    label: "Bank Account",
-    severity: "high",
-  },
-  tin: {
-    pattern: /\b\d{2}[-\s]?\d{7}\b/g,
-    label: "TIN/EIN",
-    severity: "high",
-  },
 };
+
+export function isValidSSN(ssn: string): boolean {
+  const cleaned = ssn.replace(/[-\s.]/g, "");
+  if (cleaned.length !== 9) return false;
+  if (/^000|^666|^9\d{2}/.test(cleaned)) return false;
+  if (/^\d{3}00/.test(cleaned)) return false;
+  if (/^\d{5}0000/.test(cleaned)) return false;
+  return true;
+}
+
+export function isValidCreditCard(cc: string): boolean {
+  const cleaned = cc.replace(/[-\s]/g, "");
+  if (!/^\d{13,19}$/.test(cleaned)) return false;
+  let sum = 0;
+  let isEven = false;
+  for (let i = cleaned.length - 1; i >= 0; i--) {
+    let digit = parseInt(cleaned[i], 10);
+    if (isEven) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    isEven = !isEven;
+  }
+  return sum % 10 === 0;
+}
 
 export function detectPii(text: string): PiiScanResult {
   const matches: PiiMatch[] = [];
@@ -44,10 +60,16 @@ export function detectPii(text: string): PiiScanResult {
   Object.entries(PII_PATTERNS).forEach(([type, config]) => {
     const typeMatches = Array.from(text.matchAll(config.pattern));
     for (const match of typeMatches) {
+      const value = match[0];
+
+      // Validate matches to reduce false positives
+      if (type === "ssn" && !isValidSSN(value)) continue;
+      if (type === "creditCard" && !isValidCreditCard(value)) continue;
+
       matches.push({
-        type: type,
+        type,
         label: config.label,
-        value: match[0],
+        value,
         index: match.index!,
         severity: config.severity,
       });
@@ -73,8 +95,7 @@ export function maskPii(text: string, matches: PiiMatch[]): string {
   const sorted = [...matches].sort((a, b) => b.index - a.index);
 
   sorted.forEach((match) => {
-    const maskChar = "█";
-    const mask = maskChar.repeat(match.value.length);
+    const mask = "\u2588".repeat(match.value.length);
     masked =
       masked.slice(0, match.index) +
       mask +
@@ -82,55 +103,4 @@ export function maskPii(text: string, matches: PiiMatch[]): string {
   });
 
   return masked;
-}
-
-export function maskPiiInPdfText(
-  text: string,
-  matches: PiiMatch[]
-): { maskedText: string; redactionMap: Array<{ original: string; masked: string; index: number }> } {
-  const redactionMap: Array<{ original: string; masked: string; index: number }> = [];
-  let masked = text;
-  const sorted = [...matches].sort((a, b) => b.index - a.index);
-
-  sorted.forEach((match) => {
-    const mask = "█".repeat(match.value.length);
-    redactionMap.push({
-      original: match.value,
-      masked: mask,
-      index: match.index,
-    });
-    masked =
-      masked.slice(0, match.index) +
-      mask +
-      masked.slice(match.index + match.value.length);
-  });
-
-  return { maskedText: masked, redactionMap };
-}
-
-export function isValidSSN(ssn: string): boolean {
-  const cleaned = ssn.replace(/[-\s]/g, "");
-  if (cleaned.length !== 9) return false;
-  if (/^000|^666|^[9]\d{2}/.test(cleaned)) return false;
-  if (/^\d{3}00/.test(cleaned)) return false;
-  if (/^\d{5}0000/.test(cleaned)) return false;
-  return true;
-}
-
-export function isValidCreditCard(cc: string): boolean {
-  const cleaned = cc.replace(/[-\s]/g, "");
-  if (!/^\d{13,19}$/.test(cleaned)) return false;
-
-  let sum = 0;
-  let isEven = false;
-  for (let i = cleaned.length - 1; i >= 0; i--) {
-    let digit = parseInt(cleaned[i], 10);
-    if (isEven) {
-      digit *= 2;
-      if (digit > 9) digit -= 9;
-    }
-    sum += digit;
-    isEven = !isEven;
-  }
-  return sum % 10 === 0;
 }

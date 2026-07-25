@@ -28,13 +28,18 @@ export default function PdfOcrPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-100">Client-Side OCR (Text Recognition)</h1>
+        <h1 className="text-2xl font-bold text-slate-100">
+          Client-Side OCR (Text Recognition)
+        </h1>
         <p className="text-xs text-slate-400 mt-1">
           Extract text from scanned documents using WebAssembly Tesseract.
         </p>
       </div>
 
-      <FileDropzone accept="image/*,.pdf" onFileSelect={(file) => handleFileSelect(file)} />
+      <FileDropzone
+        accept="image/*,.pdf"
+        onFileSelect={(file) => handleFileSelect(file)}
+      />
 
       <ProcessingProgress
         isProcessing={isProcessing}
@@ -53,7 +58,11 @@ export default function PdfOcrPage() {
               onClick={handleCopy}
               className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-emerald-400 flex items-center gap-1.5 transition-colors"
             >
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? (
+                <Check className="w-3.5 h-3.5" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
               {copied ? "Copied" : "Copy Text"}
             </button>
           </div>

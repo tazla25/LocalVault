@@ -1,76 +1,65 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Activity, CheckCircle, XCircle } from "lucide-react";
-
-interface LogEntry {
-  id: number;
-  message: string;
-  type: "safe" | "blocked" | "info";
-  timestamp: Date;
-}
+import { usePrivacy } from "@/lib/privacy-context";
 
 export function NetworkMonitor() {
-  const [logs, setLogs] = useState<LogEntry[]>([
-    {
-      id: 1,
-      message: "LocalVault privacy engine initialized",
-      type: "info",
-      timestamp: new Date(),
-    },
-    {
-      id: 2,
-      message: "Network interceptor active — blocking external uploads",
-      type: "safe",
-      timestamp: new Date(),
-    },
-  ]);
-
-  useEffect(() => {
-    const handleLog = (e: CustomEvent) => {
-      const newLog: LogEntry = {
-        id: Date.now(),
-        message: e.detail.message,
-        type: e.detail.type,
-        timestamp: new Date(),
-      };
-      setLogs((prev) => [...prev.slice(-20), newLog]);
-    };
-
-    window.addEventListener("localvault-log" as any, handleLog);
-    return () => window.removeEventListener("localvault-log" as any, handleLog);
-  }, []);
+  const { events, blockedCount, isActive } = usePrivacy();
 
   return (
     <div className="rounded-xl bg-black/40 border border-slate-700/30 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Activity className="w-4 h-4 text-emerald-400" />
-        <h3 className="text-sm font-bold text-emerald-400 font-mono">
-          Privacy Monitor
-        </h3>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Activity className="w-4 h-4 text-emerald-400" />
+          <h3 className="text-sm font-bold text-emerald-400 font-mono">
+            Privacy Monitor
+          </h3>
+        </div>
+        {isActive && (
+          <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+            Active
+          </span>
+        )}
       </div>
       <div className="space-y-1.5 max-h-48 overflow-y-auto font-mono text-xs">
-        {logs.map((log) => (
+        {/* Always show engine status */}
+        <div className="flex items-start gap-2 text-emerald-400">
+          <CheckCircle className="w-3 h-3 mt-0.5 shrink-0" />
+          <span>LocalVault privacy engine initialized</span>
+        </div>
+        <div className="flex items-start gap-2 text-emerald-400">
+          <CheckCircle className="w-3 h-3 mt-0.5 shrink-0" />
+          <span>
+            Network interceptor active &mdash; blocking external uploads
+          </span>
+        </div>
+
+        {/* Live network events */}
+        {events.map((event, idx) => (
           <div
-            key={log.id}
+            key={`${event.timestamp}-${idx}`}
             className={`flex items-start gap-2 ${
-              log.type === "safe"
-                ? "text-emerald-400"
-                : log.type === "blocked"
-                ? "text-red-400"
-                : "text-slate-400"
+              event.blocked ? "text-red-400" : "text-slate-400"
             }`}
           >
-            {log.type === "safe" ? (
-              <CheckCircle className="w-3 h-3 mt-0.5 shrink-0" />
-            ) : log.type === "blocked" ? (
+            {event.blocked ? (
               <XCircle className="w-3 h-3 mt-0.5 shrink-0" />
             ) : (
-              <span className="w-3 h-3 mt-0.5 shrink-0">&bull;</span>
+              <CheckCircle className="w-3 h-3 mt-0.5 shrink-0" />
             )}
-            <span>{log.message}</span>
+            <span className="truncate">
+              {event.blocked ? "BLOCKED" : "OK"}: {event.type.toUpperCase()}{" "}
+              {new URL(event.url, "http://localhost").pathname.slice(0, 40)}
+            </span>
           </div>
         ))}
+
+        {blockedCount > 0 && (
+          <div className="flex items-start gap-2 text-red-400 font-bold pt-1">
+            <XCircle className="w-3 h-3 mt-0.5 shrink-0" />
+            <span>{blockedCount} external request(s) blocked</span>
+          </div>
+        )}
       </div>
     </div>
   );

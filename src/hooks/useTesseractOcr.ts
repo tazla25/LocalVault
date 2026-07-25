@@ -10,67 +10,82 @@ export function useTesseractOcr() {
   const [result, setResult] = useState<OcrResult | null>(null);
   const workerRef = useRef<any>(null);
 
-  const processImage = useCallback(async (imageFile: File): Promise<OcrResult> => {
-    setIsProcessing(true);
-    setProgress({ status: "Initializing OCR engine...", progress: 0 });
-    setResult(null);
-
-    try {
-      const worker = await createWorker("eng", 1, {
-        logger: (m) => {
-          if ("progress" in m) {
-            setProgress({
-              status: m.status,
-              progress: Math.round(m.progress * 100),
-            });
-          }
-        },
-        workerPath:
-          "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js",
-        langPath: "https://tessdata.projectnaptha.com/4.0.0_best",
-        corePath:
-          "https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js",
+  const processImage = useCallback(
+    async (imageFile: File): Promise<OcrResult> => {
+      setIsProcessing(true);
+      setProgress({
+        status: "Initializing OCR engine...",
+        progress: 0,
       });
+      setResult(null);
 
-      workerRef.current = worker;
+      try {
+        const worker = await createWorker("eng", 1, {
+          logger: (m) => {
+            if ("progress" in m) {
+              setProgress({
+                status: m.status,
+                progress: Math.round(m.progress * 100),
+              });
+            }
+          },
+          workerPath:
+            "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js",
+          langPath:
+            "https://tessdata.projectnaptha.com/4.0.0_best",
+          corePath:
+            "https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js",
+        });
 
-      const {
-        data: { text, confidence, words },
-      } = await worker.recognize(imageFile);
+        workerRef.current = worker;
 
-      await worker.terminate();
+        const {
+          data: { text, confidence, words },
+        } = await worker.recognize(imageFile);
 
-      const ocrResult: OcrResult = {
-        text,
-        confidence,
-        words: words.map((w: any) => ({
-          text: w.text,
-          confidence: w.confidence,
-          bbox: w.bbox,
-        })),
-      };
+        await worker.terminate();
 
-      setResult(ocrResult);
-      return ocrResult;
-    } catch (error) {
-      console.error("OCR Error:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "OCR processing failed"
-      );
-    } finally {
-      setIsProcessing(false);
-    }
-  }, []);
+        const ocrResult: OcrResult = {
+          text,
+          confidence,
+          words: words.map((w: any) => ({
+            text: w.text,
+            confidence: w.confidence,
+            bbox: w.bbox,
+          })),
+        };
+
+        setResult(ocrResult);
+        return ocrResult;
+      } catch (error) {
+        console.error("OCR Error:", error);
+        throw new Error(
+          error instanceof Error
+            ? error.message
+            : "OCR processing failed"
+        );
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    []
+  );
 
   const processPdfPage = useCallback(
-    async (canvas: HTMLCanvasElement): Promise<OcrResult> => {
+    async (
+      canvas: HTMLCanvasElement
+    ): Promise<OcrResult> => {
       return new Promise((resolve, reject) => {
         canvas.toBlob(async (blob) => {
           if (!blob) {
-            reject(new Error("Canvas to blob conversion failed"));
+            reject(
+              new Error("Canvas to blob conversion failed")
+            );
             return;
           }
-          const file = new File([blob], "page.png", { type: "image/png" });
+          const file = new File([blob], "page.png", {
+            type: "image/png",
+          });
           try {
             const res = await processImage(file);
             resolve(res);

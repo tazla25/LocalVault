@@ -51,11 +51,44 @@ export interface OcrResult {
   }>;
 }
 
-export interface ToolMeta {
-  id: string;
+export type ToolId = "pdf-watermark" | "pdf-compress" | "pdf-ocr" | "pii-redact";
+
+export interface ToolDefinition {
+  id: ToolId;
   name: string;
   description: string;
   icon: string;
   href: string;
   badge?: string;
+  tier: "free" | "pro";
+}
+
+export interface PlanLimits {
+  maxFileSizeMB: number;
+  maxPagesPerPdf: number;
+  tools: ToolId[] | ["all"];
+  dailyConversions: number;
+  batchProcessing: boolean;
+}
+
+export interface PlanDefinition {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  period?: string;
+  paymentUrl: string | null;
+  limits: PlanLimits;
+  features: string[];
+  popular?: boolean;
+  cta: string;
+}
+
+export type ProcessingStatus = "idle" | "loading" | "processing" | "done" | "error";
+
+export interface PrivacyEvent {
+  type: "fetch" | "xhr";
+  url: string;
+  blocked: boolean;
+  timestamp: number;
 }

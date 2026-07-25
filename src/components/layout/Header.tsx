@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Lock } from "lucide-react";
 import { PrivacyBadge } from "./PrivacyBadge";
+import { TOOL_REGISTRY } from "@/lib/tools";
 
 export function Header() {
   return (
@@ -18,19 +19,19 @@ export function Header() {
         </Link>
 
         <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-400">
-          <Link href="/tools/pdf-watermark" className="hover:text-slate-200 transition-colors">
-            Watermark
-          </Link>
-          <Link href="/tools/pdf-compress" className="hover:text-slate-200 transition-colors">
-            Compress
-          </Link>
-          <Link href="/tools/pdf-ocr" className="hover:text-slate-200 transition-colors">
-            OCR
-          </Link>
-          <Link href="/tools/pii-redact" className="hover:text-slate-200 transition-colors">
-            PII Redact
-          </Link>
-          <Link href="/pricing" className="hover:text-slate-200 transition-colors">
+          {TOOL_REGISTRY.map((tool) => (
+            <Link
+              key={tool.id}
+              href={tool.href}
+              className="hover:text-slate-200 transition-colors"
+            >
+              {tool.name.replace("PDF ", "").replace("PDF & Image ", "").replace("PII ", "PII ")}
+            </Link>
+          ))}
+          <Link
+            href="/pricing"
+            className="hover:text-slate-200 transition-colors"
+          >
             Pricing
           </Link>
         </div>
